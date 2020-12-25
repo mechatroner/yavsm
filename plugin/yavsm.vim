@@ -1,43 +1,14 @@
 let s:session_files_list = {}
-"let s:session_dir_list = {}
 let s:session_pid = getpid()
-"let s:hostname = hostname()
 let s:session_storage_dir = $HOME . '/.yavsm_session_storage'
 
 
-
-"function doit()
-"    execute "silent keepjumps hide edit[LoadSession]"
-"    call s:DisplayBufferList()
-"endfunction
-"
-"" DisplayBufferList {{{2
-"function! s:DisplayBufferList()
-"    " Do not set bufhidden since it wipes out the data if we switch away from
-"    " the buffer using CTRL-^.
-"    setlocal buftype=nofile
-"    setlocal modifiable
-"    setlocal noswapfile
-"    setlocal nowrap
-"
-"    call s:SetupSyntax()
-"    call s:MapKeys()
-"
-"    " Wipe out any existing lines in case BufExplorer buffer exists and the
-"    " user had changed any global settings that might reduce the number of
-"    " lines needed in the buffer.
-"    silent keepjumps 1,$d _
-"
-"    call setline(1, s:CreateHelp())
-"    call s:BuildBufferList()
-"    call cursor(s:firstBufferLine, 1)
-"
-"    if !g:bufExplorerResize
-"        normal! zz
-"    endif
-"
-"    setlocal nomodifiable
-"endfunction
+func! s:setup_yavsm_syntax()
+    syn match yavsm_file   "# [0-9][0-9]*\.sss #"
+    syn match yavsm_date   "^[^#]*"
+    hi def link yavsm_date Comment
+    hi def link yavsm_file String
+endfunc
 
 
 func! yavsm#generate_display_entries()
@@ -56,8 +27,7 @@ func! yavsm#generate_display_entries()
         endfor
         let timestamp_map[file_timestamp] = join(entry, ' ')
     endfor
-    " FIXME for some reason the list is not sorted by time!
-    let timestamps = reverse(sort(keys(timestamp_map), 'n'))
+    let timestamps = reverse(sort(keys(timestamp_map), 'N'))
     let result = []
     for timestamp in timestamps
         call add(result, timestamp_map[timestamp])
@@ -80,6 +50,8 @@ func! yavsm#show_sessions()
     setlocal nospell
     setlocal nobuflisted
     setlocal filetype=yavsm
+
+    call s:setup_yavsm_syntax()
 
     call setline(1, display_entries)
 
