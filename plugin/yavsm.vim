@@ -41,24 +41,22 @@ let s:session_storage_dir = $HOME . '/.yavsm_session_storage'
 
 
 func! yavsm#generate_display_entries()
-    let sessions_files = split(globpath(s:session_storage_dir, '*.sss'), '\n')
+    let session_ctx_files = split(globpath(s:session_storage_dir, '*.sss'), '\n')
     let cur_timestamp = localtime()
     let timestamp_map = {}
-    for file_name in sessions_files
-        let s_file_path = s:session_storage_dir . '/' . file_name
+    for s_file_path in session_ctx_files
         let file_timestamp = getftime(s_file_path)
         " TODO implement removal of old files
-        let hr_file_time = strftime("%Y %b %d %X")
-        let entry = []
-        call add(entry, hr_file_time)
-        call add(entry, file_name)
+        let hr_file_time = strftime("%Y %b %d %X", file_timestamp)
+        let entry = [hr_file_time . ' # ' . fnamemodify(s_file_path, ":t") . ' # ']
         let session_files = readfile(s_file_path)
-        for session_file in sessions_files
+        for session_file in session_files
             let session_file_basename = fnamemodify(session_file, ":t")
-            call add(entry, session_file)
+            call add(entry, session_file_basename)
         endfor
-        timestamp_map[file_timestamp] = entry
+        let timestamp_map[file_timestamp] = join(entry, ' ')
     endfor
+    " FIXME for some reason the list is not sorted by time!
     let timestamps = reverse(sort(keys(timestamp_map), 'n'))
     let result = []
     for timestamp in timestamps
