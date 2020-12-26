@@ -1,13 +1,46 @@
 let s:session_files_list = {}
-let s:session_pid = getpid()
+let s:session_id = getpid()
 let s:session_storage_dir = $HOME . '/.yavsm_session_storage'
 
 
 func! s:setup_yavsm_syntax()
-    syn match yavsm_file   "# [0-9][0-9]*\.sss #"
+    syn match yavsm_file   "# *[0-9][0-9]*\.sss *#"
     syn match yavsm_date   "^[^#]*"
     hi def link yavsm_date Comment
     hi def link yavsm_file String
+endfunc
+
+
+func! yavsm#save_session_state()
+    let lines = keys(s:session_files_list)
+    let filtered_lines = []
+    for line in lines
+        if len(line) && filereadable(line)
+            call add(filtered_lines, line)
+        endif
+    endfor
+    let dst_path = s:session_storage_dir . '/' . s:session_id . '.sss'
+    call writefile(filtered_lines, dst_path)
+endfunc
+
+
+func! s:select_yavsm_session()
+    let selected_record_line = getline('.')
+    let session_ctx_file_name = split(selected_record_line, '#')[1]
+    let session_ctx_file_path = s:session_storage_dir . '/' . session_ctx_file_name
+    let file_components = split(session_ctx_file_name, '\.')
+    echomsg len(file_components)
+    if len(file_components) != 2 || file_components[1] != 'sss'
+        return
+    endif
+    let s:session_id = file_components[0]
+    let session_files = readfile(session_ctx_file_path)
+    for session_file in session_files
+        if len(session_file) && filereadable(session_file)
+            execute "e " . fnameescape(session_file)
+        endif
+    endfor
+    call yavsm#save_session_state()
 endfunc
 
 
@@ -19,7 +52,7 @@ func! yavsm#generate_display_entries()
         let file_timestamp = getftime(s_file_path)
         " TODO implement removal of old files
         let hr_file_time = strftime("%Y %b %d %X", file_timestamp)
-        let entry = [hr_file_time . ' # ' . fnamemodify(s_file_path, ":t") . ' # ']
+        let entry = [hr_file_time . ' #' . fnamemodify(s_file_path, ":t") . '# ']
         let session_files = readfile(s_file_path)
         for session_file in session_files
             let session_file_basename = fnamemodify(session_file, ":t")
@@ -52,24 +85,12 @@ func! yavsm#show_sessions()
     setlocal filetype=yavsm
 
     call s:setup_yavsm_syntax()
+    nnoremap <script> <silent> <nowait> <buffer> <CR> :call <SID>select_yavsm_session()<CR>
 
     call setline(1, display_entries)
 
     call cursor(1, 1)
     setlocal nomodifiable
-endfunc
-
-
-func! yavsm#save_session_state()
-    let lines = keys(s:session_files_list)
-    let filtered_lines = []
-    for line in lines
-        if len(line) && filereadable(line)
-            call add(filtered_lines, line)
-        endif
-    endfor
-    let dst_path = s:session_storage_dir . '/' . s:session_pid . '.sss'
-    call writefile(filtered_lines, dst_path)
 endfunc
 
 
