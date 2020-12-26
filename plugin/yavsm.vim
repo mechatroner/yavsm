@@ -20,14 +20,24 @@ func! yavsm#save_session_state()
             call add(filtered_lines, line)
         endif
     endfor
+    if !isdirectory(s:session_storage_dir)
+        call mkdir(s:session_storage_dir)
+    endif
     let dst_path = s:session_storage_dir . '/' . s:session_id . '.sss'
-    call writefile(filtered_lines, dst_path)
+    if len(filtered_lines)
+        call writefile(filtered_lines, dst_path)
+    endif
 endfunc
 
 
 func! s:select_yavsm_session()
     let selected_record_line = getline('.')
-    let session_ctx_file_name = split(selected_record_line, '#')[1]
+    let record_fields = split(selected_record_line, '#', 1)
+    if len(record_fields) < 3
+        echomsg "Unable to load the selected session"
+        return
+    endif
+    let session_ctx_file_name = record_fields[1]
     let session_ctx_file_path = s:session_storage_dir . '/' . session_ctx_file_name
     let file_components = split(session_ctx_file_name, '\.')
     if len(file_components) != 2 || file_components[1] != 'sss'
@@ -48,6 +58,9 @@ endfunc
 
 
 func! yavsm#generate_display_entries()
+    if !isdirectory(s:session_storage_dir)
+        return []
+    endif
     let session_ctx_files = split(globpath(s:session_storage_dir, '*.sss'), '\n')
     let cur_timestamp = localtime()
     let timestamp_map = {}
