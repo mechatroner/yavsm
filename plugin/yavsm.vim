@@ -53,7 +53,10 @@ func! yavsm#generate_display_entries()
     let timestamp_map = {}
     for s_file_path in session_ctx_files
         let file_timestamp = getftime(s_file_path)
-        " TODO implement removal of old files
+        if cur_timestamp - file_timestamp > 3600 * 24 * 30
+            call delete(s_file_path)
+            continue
+        endif
         let hr_file_time = strftime("%Y %b %d %X", file_timestamp)
         let entry = [hr_file_time . ' #' . fnamemodify(s_file_path, ":t") . '# ']
         let session_files = readfile(s_file_path)
@@ -101,8 +104,6 @@ func! yavsm#handle_buffer_enter()
     if !s:enable_yavsm_buf_trigger
         return
     endif
-    let cur_timestamp = localtime()
-    let hr_time = strftime("%Y %b %d %X")
     let buf_path = resolve(expand("%:p"))
     if len(buf_path) && !has_key(s:session_files_list, buf_path) && filereadable(buf_path)
         let s:session_files_list[buf_path] = 1
