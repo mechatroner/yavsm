@@ -1,6 +1,7 @@
 let s:session_files_list = {}
 let s:session_id = getpid()
 let s:session_storage_dir = $HOME . '/.yavsm_session_storage'
+let s:enable_yavsm_buf_trigger = 1
 
 
 func! s:setup_yavsm_syntax()
@@ -29,17 +30,19 @@ func! s:select_yavsm_session()
     let session_ctx_file_name = split(selected_record_line, '#')[1]
     let session_ctx_file_path = s:session_storage_dir . '/' . session_ctx_file_name
     let file_components = split(session_ctx_file_name, '\.')
-    echomsg len(file_components)
     if len(file_components) != 2 || file_components[1] != 'sss'
         return
     endif
     let s:session_id = file_components[0]
     let session_files = readfile(session_ctx_file_path)
+    let s:enable_yavsm_buf_trigger = 0
     for session_file in session_files
-        if len(session_file) && filereadable(session_file)
+        if len(session_file) && !has_key(s:session_files_list, session_file) && filereadable(session_file)
             execute "e " . fnameescape(session_file)
+            let s:session_files_list[session_file] = 1
         endif
     endfor
+    let s:enable_yavsm_buf_trigger = 1
     call yavsm#save_session_state()
 endfunc
 
@@ -95,6 +98,9 @@ endfunc
 
 
 func! yavsm#handle_buffer_enter()
+    if !s:enable_yavsm_buf_trigger
+        return
+    endif
     let cur_timestamp = localtime()
     let hr_time = strftime("%Y %b %d %X")
     let buf_path = resolve(expand("%:p"))
